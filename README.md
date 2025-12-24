@@ -14,9 +14,6 @@
 6. [Folder Sharing System](#folder-sharing-system)
 7. [RBAC for Organization Drive](#rbac-organization)
 8. [Real-World Examples](#real-examples)
-9. [Edge Cases & Testing Scenarios](#edge-cases)
-
----
 
 ## 🎯 System Overview {#system-overview}
 
