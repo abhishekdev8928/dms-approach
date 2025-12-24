@@ -196,7 +196,7 @@ Four levels of access for any folder:
 
 ### Why This Architecture?
 
-We're using **Approach 3: Enterprise Grade with Access Control Table** because:
+We're using **Enterprise Grade with Access Control Table** because:
 
 - ✅ **Requirement Met:** Personal folder sharing with granular permissions
 - ✅ **Scalability:** Easy to add new permission levels
@@ -562,20 +562,6 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 - If found → Can VIEW, UPLOAD
 - If not found → DENY
 
-### Role Permissions Matrix
-
-```
-┌───────────────┬──────┬────────┬────────┬──────────────┬────────────┐
-│ Role          │ VIEW │ UPLOAD │ DELETE │ CREATE FOLDER│ MANAGE     │
-├───────────────┼──────┼────────┼────────┼──────────────┼────────────┤
-│ SUPER_ADMIN   │  ✅  │   ✅   │   ✅   │      ✅      │     ✅     │
-│ ADMIN         │  ✅  │   ✅   │   ✅   │      ✅      │     ❌     │
-│ DEPT_HEAD     │  ✅  │   ✅   │   ✅   │      ✅      │     ❌     │
-│ FOLDER_MANAGER│  ✅  │   ✅   │   ✅   │   Subfolder  │     ❌     │
-│ FOLDER_USER   │  ✅  │   ✅   │   ❌   │      ❌      │     ❌     │
-└───────────────┴──────┴────────┴────────┴──────────────┴────────────┘
-```
-
 ---
 
 ## 🤝 Folder Sharing System {#folder-sharing-system}
@@ -697,97 +683,501 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
                  FOLDER_USER
 ```
 
-### Role Descriptions
+---
 
-#### SUPER_ADMIN:
-- **Scope:** Entire organization
-- **Access:** All organization folders across all departments
-- **Permissions:** Full control - VIEW, UPLOAD, DELETE, CREATE_FOLDER, MANAGE_USERS
-- **Cannot Access:** Personal folders of users
-- **Special Powers:** System-wide configuration, user role management
+## 👥 The 5 Roles Explained
 
-#### ADMIN:
-- **Scope:** Assigned departments
-- **Access:** All organization folders in assigned departments
-- **Permissions:** VIEW, UPLOAD, DELETE, CREATE_FOLDER, ASSIGN_FOLDER_MANAGER
-- **Assignment:** Can be assigned to multiple departments
-- **Limitations:** Cannot access departments they're not assigned to
+### 🔴 Role 1: SUPER_ADMIN
+**Who**: System owner, CTO, IT Head
 
-#### DEPT_HEAD:
-- **Scope:** Single department (their own)
-- **Access:** All organization folders in their department
-- **Permissions:** VIEW, UPLOAD, DELETE, CREATE_FOLDER, ASSIGN_FOLDER_MANAGER
-- **Assignment:** Assigned to one department only
-- **Limitations:** Cannot access other departments
+**Powers**:
+- ✅ Create/delete departments
+- ✅ Access ALL organization folders in ALL departments
+- ✅ Create/delete folders anywhere in organization drive
+- ✅ Upload/delete files anywhere in organization drive
+- ✅ Assign Admins to departments
+- ✅ Assign Department Heads
+- ✅ Assign Folder Managers and Folder Users
+- ✅ Manage all users and roles
 
-#### FOLDER_MANAGER:
-- **Scope:** Specifically assigned folders
-- **Access:** Only folders explicitly assigned by ADMIN/DEPT_HEAD
-- **Permissions:** VIEW, UPLOAD, DELETE, CREATE_SUBFOLDER
-- **Inheritance:** Access to subfolders automatically
-- **Limitations:** Cannot create top-level folders
+**Restrictions**:
+- ❌ None for organization folders - bypasses all access checks
+- ❌ **CANNOT access personal folders** (privacy respected)
 
-#### FOLDER_USER:
-- **Scope:** Specifically assigned folders
-- **Access:** Only folders explicitly assigned by ADMIN/DEPT_HEAD
-- **Permissions:** VIEW, UPLOAD (read and add only)
-- **Inheritance:** Access to subfolders automatically
-- **Limitations:** Cannot delete or create folders
+**Example Scenario:**
+```
+Rajesh (Super Admin):
+✅ Creates "Marketing" department
+✅ Creates "Sales" department
+✅ Makes Priya an Admin and assigns to Marketing + Sales
+✅ Can access ANY file in ANY organization folder
+✅ Can delete any organization folder
+❌ Cannot see Sarah's personal "Draft Documents" folder (privacy)
+```
 
-### Department-Based Access
+---
 
-**Organization Structure:**
+### 🟠 Role 2: ADMIN
+**Who**: Senior manager handling multiple departments
+
+**Powers**:
+- ✅ Access assigned departments (can be assigned to MULTIPLE departments)
+- ✅ View all folders/files in assigned departments
+- ✅ Create/delete root folders in assigned departments
+- ✅ Upload/delete files in assigned departments
+- ✅ Assign Folder Managers to folders in assigned departments
+- ✅ Assign Folder Users to folders in assigned departments
+
+**Restrictions**:
+- ❌ Cannot create new departments
+- ❌ Cannot access non-assigned departments
+- ❌ Cannot assign other Admins (only Super Admin can)
+- ❌ Cannot assign Department Heads
+- ❌ Cannot access personal folders of any user
+
+**Example Scenario:**
+```
+Priya (Admin assigned to Marketing + Sales departments):
+✅ Can create root folders in Marketing department
+✅ Can upload files to any folder in Sales department
+✅ Can assign Rahul as Folder Manager to "Campaigns" folder
+✅ Can delete files in Marketing or Sales
+❌ Cannot access HR department (not assigned)
+❌ Cannot create new departments
+❌ Cannot make another user an Admin
+❌ Cannot see anyone's personal folders
+```
+
+**Department Assignment:**
+- Admin can be assigned to 1, 2, 3+ departments
+- Super Admin controls these assignments
+- Each assignment grants full access to that department's org folders
+
+**Access Validation:**
+```javascript
+// For Admin accessing organization folder
+if (user.role === 'ADMIN') {
+  const folder = getFolder(folderId);
+  if (user.assignedDepartments.includes(folder.departmentId)) {
+    return ALLOW; // Admin has access to this department
+  }
+  return DENY; // Admin not assigned to this department
+}
+```
+
+---
+
+### 🟡 Role 3: DEPT_HEAD (Department Head)
+**Who**: Head/Manager of ONE specific department
+
+**Powers**:
+- ✅ Full access to their assigned department
+- ✅ View all folders/files in their department
+- ✅ Create/delete root folders in their department
+- ✅ Upload/delete files in their department
+- ✅ Assign Folder Managers to folders in their department
+- ✅ Assign Folder Users to folders in their department
+
+**Restrictions**:
+- ❌ Can only manage ONE department
+- ❌ Cannot access other departments
+- ❌ Cannot create new departments
+- ❌ Cannot assign Admins or other Department Heads
+- ❌ Cannot access personal folders
+
+**Example Scenario:**
+```
+Sneha (Department Head of Marketing):
+✅ Can create any root folder in Marketing department
+✅ Can delete any file in Marketing department
+✅ Can assign Rahul as Folder Manager to "Campaigns" folder
+✅ Can upload files anywhere in Marketing
+❌ Cannot see Sales department folders
+❌ Cannot access HR department folders
+❌ Cannot make anyone an Admin
+❌ Cannot see personal folders
+```
+
+**Department Assignment:**
+- Dept Head is assigned to exactly ONE department
+- Cannot be changed without Super Admin
+- Full control over their department (similar to Admin but single dept)
+
+**Access Validation:**
+```javascript
+// For Dept Head accessing organization folder
+if (user.role === 'DEPT_HEAD') {
+  const folder = getFolder(folderId);
+  if (user.assignedDepartment === folder.departmentId) {
+    return ALLOW; // Dept Head manages this department
+  }
+  return DENY; // Not their department
+}
+```
+
+---
+
+### 🟢 Role 4: FOLDER_MANAGER
+**Who**: Owner/Manager of specific folder(s) within a department
+
+**Powers**:
+- ✅ Full access to assigned folders
+- ✅ View all files in assigned folders
+- ✅ Upload/delete files in assigned folders
+- ✅ Create subfolders inside assigned folders
+- ✅ Delete subfolders inside assigned folders
+- ✅ **Automatic access to ALL subfolders** (inheritance)
+
+**Restrictions**:
+- ❌ Cannot access folders they don't manage
+- ❌ Cannot create root-level folders in department
+- ❌ Cannot assign other Folder Managers or Folder Users
+- ❌ Cannot access department level
+- ❌ Cannot access personal folders
+
+**Example Scenario:**
+```
+Rahul (Folder Manager assigned to "Campaign 2025" folder):
+✅ Can upload files to "Campaign 2025"
+✅ Can create "Design Assets" subfolder inside "Campaign 2025"
+✅ Can delete any file in "Campaign 2025"
+✅ Can delete "Design Assets" subfolder
+✅ Automatically has access to all subfolders under "Campaign 2025"
+❌ Cannot access "Social Media" folder (not assigned)
+❌ Cannot create new root folder in Marketing department
+❌ Cannot assign other users to folders
+```
+
+**Important - Automatic Subfolder Inheritance:**
+```
+Folder Manager assigned to: "Campaign 2025"
+  │
+  ├── Design Assets (✅ automatic access)
+  │     ├── Logos (✅ automatic access)
+  │     └── Banners (✅ automatic access)
+  │
+  └── Budget Files (✅ automatic access)
+
+Folder Manager gets access to entire folder tree below assignment point!
+```
+
+**Access Validation:**
+```javascript
+// For Folder Manager accessing folder
+if (user.role === 'FOLDER_MANAGER') {
+  // Check direct assignment
+  const hasDirectAccess = await FolderAccess.findOne({
+    userId: user.id,
+    folderId: folderId,
+    accessSource: 'ASSIGNED_RBAC',
+    isActive: true
+  });
+  
+  if (hasDirectAccess) return ALLOW;
+  
+  // Check parent folder access (inheritance)
+  const folder = await getFolder(folderId);
+  if (folder.parentId) {
+    return checkFolderManagerAccess(user, folder.parentId); // Recursive
+  }
+  
+  return DENY;
+}
+```
+
+---
+
+### 🔵 Role 5: FOLDER_USER
+**Who**: Team member who needs basic read and upload access
+
+**Powers**:
+- ✅ View folders they have access to
+- ✅ View files in accessible folders
+- ✅ Upload new files (basic contribution)
+- ✅ **Automatic access to ALL subfolders** (inheritance)
+
+**Restrictions**:
+- ❌ Cannot delete any files or folders
+- ❌ Cannot create new folders or subfolders
+- ❌ Cannot manage or assign other users
+- ❌ Cannot access folders not assigned to them
+- ❌ Very limited access - read and upload only
+
+**Example Scenario:**
+```
+Anjali (Folder User assigned to "Campaign 2025" folder):
+✅ Can view files in "Campaign 2025"
+✅ Can upload her work files to "Campaign 2025"
+✅ Can view all subfolders under "Campaign 2025"
+✅ Can upload to subfolders
+❌ Cannot delete anything
+❌ Cannot create subfolders
+❌ Cannot give access to others
+❌ Cannot access "Social Media" folder (not assigned)
+```
+
+**Automatic Subfolder Inheritance:**
+```
+Folder User assigned to: "Campaign 2025"
+  │
+  ├── Design Assets (✅ can view + upload)
+  │     ├── Logos (✅ can view + upload)
+  │     └── Banners (✅ can view + upload)
+  │
+  └── Budget Files (✅ can view + upload)
+
+Folder User can contribute to entire folder tree!
+```
+
+**Access Validation:**
+```javascript
+// For Folder User accessing folder
+if (user.role === 'FOLDER_USER') {
+  // Check direct assignment or parent inheritance
+  const hasAccess = await checkFolderAccess(user.id, folderId);
+  
+  if (hasAccess) {
+    // Only allow VIEW and UPLOAD actions
+    if (action === 'VIEW' || action === 'UPLOAD') {
+      return ALLOW;
+    }
+    return DENY; // Cannot DELETE or CREATE_FOLDER
+  }
+  
+  return DENY;
+}
+```
+
+---
+
+## 🎯 Role Permissions Matrix
+
+| Role | Scope | View | Upload | Delete | Create Folder | Manage Users | Access Personal |
+|------|-------|------|--------|--------|---------------|--------------|-----------------|
+| **SUPER_ADMIN** | All Org Folders | ✅ | ✅ | ✅ | ✅ Root Level | ✅ All Roles | ❌ |
+| **ADMIN** | Assigned Depts | ✅ | ✅ | ✅ | ✅ Root Level | ✅ FM/FU Only | ❌ |
+| **DEPT_HEAD** | Own Dept | ✅ | ✅ | ✅ | ✅ Root Level | ✅ FM/FU Only | ❌ |
+| **FOLDER_MANAGER** | Assigned Folders | ✅ | ✅ | ✅ | ✅ Subfolders | ❌ | ❌ |
+| **FOLDER_USER** | Assigned Folders | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+
+---
+
+## 🔄 Access Control Implementation
+
+### Central Access Function
+
+```javascript
+/**
+ * Single source of truth for all access decisions
+ * @param {Object} user - Current user object
+ * @param {Object} resource - Folder/File being accessed
+ * @param {String} action - Action to perform (VIEW, UPLOAD, DELETE, etc.)
+ * @returns {Boolean} - true if allowed, false if denied
+ */
+async function canAccess(user, resource, action) {
+  // GATE 1: Check folder type
+  const folder = resource.type === 'FILE' 
+    ? await getFolder(resource.folderId) 
+    : resource;
+  
+  // PERSONAL FOLDER LOGIC
+  if (folder.type === 'PERSONAL') {
+    // Check ownership
+    if (folder.ownerId.toString() === user.id.toString()) {
+      return true; // Owner has full access
+    }
+    
+    // Check if shared with user
+    const access = await FolderAccess.findOne({
+      folderId: folder.id,
+      userId: user.id,
+      accessSource: 'SHARED',
+      isActive: true
+    });
+    
+    if (!access) return false;
+    
+    // Check if access expired
+    if (access.expiresAt && access.expiresAt < new Date()) {
+      return false;
+    }
+    
+    // Check permission level allows this action
+    return permissionAllows(access.accessType, action);
+  }
+  
+  // ORGANIZATION FOLDER LOGIC
+  if (folder.type === 'ORGANIZATION') {
+    // Gate 1: Super Admin bypass
+    if (user.role === 'SUPER_ADMIN') {
+      return true;
+    }
+    
+    // Gate 2: Department-level access (Admin/Dept Head)
+    if (user.role === 'ADMIN') {
+      if (!user.assignedDepartments.includes(folder.departmentId)) {
+        return false;
+      }
+      return roleAllows(user.role, action);
+    }
+    
+    if (user.role === 'DEPT_HEAD') {
+      if (user.assignedDepartment !== folder.departmentId) {
+        return false;
+      }
+      return roleAllows(user.role, action);
+    }
+    
+    // Gate 3: Folder-level access (Folder Manager/User)
+    if (user.role === 'FOLDER_MANAGER' || user.role === 'FOLDER_USER') {
+      const hasAccess = await userHasFolderAccess(user, folder.id);
+      if (!hasAccess) return false;
+      return roleAllows(user.role, action);
+    }
+  }
+  
+  // Default: Deny
+  return false;
+}
+
+// Define what each role can do
+const ROLE_PERMISSIONS = {
+  SUPER_ADMIN: ['VIEW', 'UPLOAD', 'DELETE', 'CREATE_FOLDER', 'MANAGE_USERS'],
+  ADMIN: ['VIEW', 'UPLOAD', 'DELETE', 'CREATE_FOLDER', 'ASSIGN_FOLDER_MANAGER'],
+  DEPT_HEAD: ['VIEW', 'UPLOAD', 'DELETE', 'CREATE_FOLDER', 'ASSIGN_FOLDER_MANAGER'],
+  FOLDER_MANAGER: ['VIEW', 'UPLOAD', 'DELETE', 'CREATE_SUBFOLDER'],
+  FOLDER_USER: ['VIEW', 'UPLOAD']
+};
+
+function roleAllows(role, action) {
+  return ROLE_PERMISSIONS[role]?.includes(action) || false;
+}
+
+// Personal folder sharing permissions
+const SHARE_PERMISSIONS = {
+  OWNER: ['VIEW', 'UPLOAD', 'DELETE', 'SHARE', 'MANAGE'],
+  CO_OWNER: ['VIEW', 'UPLOAD', 'DELETE', 'SHARE'],
+  EDITOR: ['VIEW', 'UPLOAD', 'DELETE'],
+  VIEWER: ['VIEW']
+};
+
+function permissionAllows(accessType, action) {
+  return SHARE_PERMISSIONS[accessType]?.includes(action) || false;
+}
+
+// Check folder access with inheritance
+async function userHasFolderAccess(user, folderId) {
+  // Check direct assignment
+  const directAccess = await FolderAccess.findOne({
+    userId: user.id,
+    folderId: folderId,
+    accessSource: 'ASSIGNED_RBAC',
+    isActive: true
+  });
+  
+  if (directAccess) return true;
+  
+  // Check parent folder access (inheritance)
+  const folder = await Folder.findById(folderId);
+  if (folder && folder.parentId) {
+    return userHasFolderAccess(user, folder.parentId); // Recursive
+  }
+  
+  return false;
+}
+```
+
+---
+
+## 📊 Department-Based Access Examples
+
+### Organization Structure
 
 ```
 Company
-├── Marketing Department
+├── Marketing Department (Dept Head: Sneha)
 │   ├── Campaigns Folder
 │   │   ├── Q1-2024 (subfolder)
 │   │   └── Q2-2024 (subfolder)
 │   └── Analytics Folder
 │
-├── Engineering Department
+├── Engineering Department (Dept Head: Tom)
 │   ├── Projects Folder
 │   │   ├── Project-A (subfolder)
 │   │   └── Project-B (subfolder)
 │   └── Documentation Folder
 │
-└── HR Department
+└── HR Department (Dept Head: Rachel)
     ├── Recruitment Folder
     └── Policies Folder
 ```
 
-**Access Examples:**
+### Access Scenarios
 
-1. **Super Admin** → Access to ALL folders in ALL departments
+**1. Super Admin (Mike):**
+```
+✅ Access to ALL folders in ALL departments
+✅ Marketing/Campaigns: Full access
+✅ Engineering/Projects: Full access
+✅ HR/Recruitment: Full access
+✅ Can create folders in any department
+✅ Can assign any role to any user
+```
 
-2. **Admin (assigned to Marketing + Engineering)**
-   - → Access to Marketing folders
-   - → Access to Engineering folders
-   - → NO access to HR folders
+**2. Admin (Lisa - assigned to Marketing + Engineering):**
+```
+✅ Marketing/Campaigns: Full access
+✅ Marketing/Analytics: Full access
+✅ Engineering/Projects: Full access
+✅ Engineering/Documentation: Full access
+❌ HR/Recruitment: NO access (not assigned to HR)
+❌ HR/Policies: NO access (not assigned to HR)
+✅ Can assign Folder Managers in Marketing and Engineering
+❌ Cannot assign Folder Managers in HR
+```
 
-3. **Marketing Dept Head**
-   - → Access to ALL Marketing folders
-   - → NO access to Engineering or HR folders
+**3. Dept Head (Sneha - Marketing):**
+```
+✅ Marketing/Campaigns: Full access
+✅ Marketing/Analytics: Full access
+✅ Can create any folder in Marketing
+✅ Can assign Folder Managers in Marketing
+❌ Engineering/Projects: NO access (different department)
+❌ HR/Recruitment: NO access (different department)
+```
 
-4. **Folder Manager (assigned to "Campaigns Folder")**
-   - → Access to Campaigns Folder
-   - → Access to Q1-2024 and Q2-2024 (inheritance)
-   - → NO access to Analytics Folder
+**4. Folder Manager (Rahul - assigned to "Campaigns"):**
+```
+✅ Campaigns Folder: Full access
+✅ Q1-2024: Automatic access (inheritance)
+✅ Q2-2024: Automatic access (inheritance)
+✅ Can create subfolders under Campaigns
+✅ Can delete files in any subfolder
+❌ Analytics Folder: NO access (not assigned)
+❌ Cannot create root folder in Marketing
+```
 
-5. **Folder User (assigned to "Project-A")**
-   - → Can VIEW and UPLOAD to Project-A
-   - → Cannot DELETE or CREATE folders
-   - → NO access to Project-B
+**5. Folder User (Anjali - assigned to "Project-A"):**
+```
+✅ Project-A: Can view and upload
+✅ Any subfolders under Project-A: Can view and upload (inheritance)
+❌ Project-B: NO access (not assigned)
+❌ Cannot delete any files
+❌ Cannot create folders
+```
 
-### Folder Assignment Flow
+---
+
+## 🔄 Folder Assignment Flow
+
+### How Admin/Dept Head Assigns Folder Access
 
 ```
 ┌─────────────────────────────────────────────────┐
 │         ADMIN/DEPT_HEAD ASSIGNS FOLDER          │
 ├─────────────────────────────────────────────────┤
 │                                                 │
-│  1. Select organization folder                  │
+│  1. Admin/Dept Head selects organization folder │
 │     ↓                                           │
 │  2. Choose user to assign                       │
 │     ↓                                           │
@@ -798,7 +1188,7 @@ Company
 │  4. Create FolderAccess record:                 │
 │     • folderId = selected folder                │
 │     • userId = selected user                    │
-│     • accessType = FOLDER_MANAGER or EDITOR/VIEWER│
+│     • accessType = FOLDER_MANAGER or EDITOR     │
 │     • accessSource = ASSIGNED_RBAC              │
 │     • grantedBy = current admin/dept_head       │
 │     ↓                                           │
@@ -809,26 +1199,29 @@ Company
 └─────────────────────────────────────────────────┘
 ```
 
-### Access Inheritance in Organization Folders
+### Access Inheritance Visualization
 
 ```
 Parent Folder: "Engineering Department"
-├── Child Folder: "Projects"
-│   ├── Grandchild: "Project-A"
-│   └── Grandchild: "Project-B"
+├── Child: "Projects" (Folder Manager assigned here)
+│   ├── Grandchild: "Project-A" (✅ automatic access)
+│   └── Grandchild: "Project-B" (✅ automatic access)
 
 If Folder Manager is assigned to "Projects":
 ✅ Can access "Projects"
 ✅ Can access "Project-A" (inherited)
 ✅ Can access "Project-B" (inherited)
 ✅ Can create new subfolder under "Projects"
-❌ Cannot access "Engineering Department" (parent)
+❌ Cannot access "Engineering Department" (parent - no upward inheritance)
 
 If Folder User is assigned to "Project-A":
 ✅ Can access "Project-A"
+✅ Can access any subfolders under "Project-A" (inherited)
 ❌ Cannot access "Projects" (parent)
 ❌ Cannot access "Project-B" (sibling)
 ```
+
+**Key Rule:** Inheritance flows DOWN the folder tree, never UP.
 
 ---
 
@@ -845,7 +1238,7 @@ Marketing department needs to collaborate on campaign materials. Some assets are
 - Sarah (Dept Head - Marketing)
 - John (Folder Manager)
 - Alice (Folder User)
-- Bob (Freelancer - external)
+- Bob (Freelancer - external consultant)
 
 **Organization Structure:**
 ```
@@ -868,54 +1261,69 @@ Sarah's My Drive
 **Workflow:**
 
 1. **Sarah creates campaign draft in her personal drive**
-   - Creates "Campaign Drafts" folder
+   - Creates "Campaign Drafts" folder (type: PERSONAL)
    - Uploads draft designs
    - Folder is completely private
+   - Even Super Admin cannot see it
 
 2. **Sarah shares draft with John for feedback**
    - Shares "Campaign Drafts" with John
    - Grants EDITOR permission
    - John can now view and add comments
    - Folder appears in John's "Shared with Me"
+   - FolderShare and FolderAccess records created
 
 3. **John reviews and approves**
    - Accesses folder from "Shared with Me"
    - Reviews files
-   - Uploads revised versions
+   - Uploads revised versions (EDITOR permission)
 
 4. **Sarah shares with Bob (freelancer)**
    - Shares same folder with Bob
    - Grants VIEWER permission only
    - Bob can view but not modify
+   - Bob does not have access to organization folders
 
-5. **Final assets moved to organization**
+5. **Sarah assigns John as Folder Manager for Q4 Campaigns**
+   - Goes to Organization Drive
+   - Selects "Q4 Campaigns" folder
+   - Assigns John as FOLDER_MANAGER
+   - Creates FolderAccess with accessSource = ASSIGNED_RBAC
+   - John now has full control of Q4 Campaigns and all subfolders
+
+6. **Sarah assigns Alice as Folder User**
+   - Assigns Alice to "Q4 Campaigns"
+   - Alice can view and upload
+   - Alice cannot delete or create folders
+
+7. **Final assets moved to organization**
    - Sarah uploads final assets to "Q4 Campaigns"
-   - John (Folder Manager) organizes them
+   - John (Folder Manager) organizes them into subfolders
    - Alice (Folder User) can view and download
    - Bob cannot access organization folders
 
 **Access Summary:**
 
-**Campaign Drafts (Personal):**
-- Sarah: OWNER
-- John: EDITOR (shared)
-- Bob: VIEWER (shared)
+**Campaign Drafts (Personal Folder):**
+- Sarah: OWNER (created it)
+- John: EDITOR (shared by Sarah)
+- Bob: VIEWER (shared by Sarah)
 - Alice: NO ACCESS
 - Super Admin: NO ACCESS (privacy)
 
-**Q4 Campaigns (Organization):**
+**Q4 Campaigns (Organization Folder):**
 - Sarah: Full access (Dept Head)
 - John: Full access (Folder Manager assigned)
 - Alice: View + Upload (Folder User assigned)
 - Bob: NO ACCESS (not in organization)
-- Super Admin: Full access
+- Super Admin: Full access (role-based)
 
 ---
 
-### Example 2: Engineering Documentation
+### Example 2: Engineering Documentation with Strict Access
 
 **Scenario:**
-Engineering team manages project documentation with strict access control.
+Engineering team manages project documentation with strict access control based on roles.
 
 **Setup:**
 
@@ -925,6 +1333,7 @@ Engineering team manages project documentation with strict access control.
 - Tom (Dept Head - Engineering)
 - Emma (Folder Manager - Project A)
 - David (Folder User - Project A)
+- Sarah (Folder User - Project B)
 
 **Organization Structure:**
 ```
@@ -935,83 +1344,152 @@ Organization Drive
 │   │   ├── Design Docs
 │   │   └── API Specs
 │   ├── Project B Documentation
+│   │   ├── Architecture
+│   │   └── Code Review
 │   └── Internal Tools
+│
 └── HR Department
     └── Employee Handbook
 ```
 
 **Workflow:**
 
-1. **Tom creates Project A folder structure**
-   - As Dept Head, creates "Project A Documentation"
+1. **Tom creates folder structure**
+   - As Dept Head of Engineering
+   - Creates "Project A Documentation" root folder
    - Creates subfolders: Requirements, Design Docs, API Specs
    - All inherit Engineering department access
 
 2. **Tom assigns Emma as Folder Manager**
+   - Selects "Project A Documentation"
+   - Assigns Emma as FOLDER_MANAGER
    - Emma gets full control of Project A folder
-   - Can manage files and subfolders
-   - Access automatically includes all subfolders
+   - Emma automatically gets access to all subfolders (inheritance)
 
 3. **Emma assigns David as Folder User**
+   - Emma selects "Project A Documentation"
+   - Assigns David as FOLDER_USER
    - David gets view + upload access
-   - Can contribute documents
-   - Cannot delete or reorganize
+   - David can contribute documents but cannot delete
 
-4. **Access scenarios:**
+4. **Tom assigns Sarah to Project B**
+   - Assigns Sarah as FOLDER_USER to "Project B Documentation"
+   - Sarah can only access Project B, not Project A
 
-   **Mike (Super Admin):**
-   - Can access ALL organization folders
-   - Project A: ✅ Full access
-   - Project B: ✅ Full access
-   - HR Handbook: ✅ Full access
+**Access Validation Scenarios:**
 
-   **Lisa (Admin - Engineering + HR):**
-   - Can access assigned departments
-   - Project A: ✅ Full access
-   - Project B: ✅ Full access
-   - HR Handbook: ✅ Full access
-   - Other departments: ❌ No access
+**Mike (Super Admin):**
+```
+Action: Access "Project A/Requirements" folder
+✅ ALLOWED
+Reason: Super Admin bypasses all checks
+Can also: Create, Delete, Upload anywhere
 
-   **Tom (Dept Head - Engineering):**
-   - Can access only Engineering department
-   - Project A: ✅ Full access
-   - Project B: ✅ Full access
-   - HR Handbook: ❌ No access (different dept)
+Action: Access Sarah's personal folder
+❌ DENIED
+Reason: Personal folders respect privacy even for Super Admin
+```
 
-   **Emma (Folder Manager - Project A):**
-   - Can access only assigned folders
-   - Project A: ✅ Full access (assigned)
-   - Requirements: ✅ Full access (inheritance)
-   - Design Docs: ✅ Full access (inheritance)
-   - Project B: ❌ No access (not assigned)
+**Lisa (Admin - Engineering + HR):**
+```
+Action: Upload file to "Project A/Design Docs"
+✅ ALLOWED
+Reason: Admin assigned to Engineering department
 
-   **David (Folder User - Project A):**
-   - Can access only assigned folders
-   - Project A: ✅ View + Upload
-   - Requirements: ✅ View + Upload (inheritance)
-   - Design Docs: ✅ View + Upload (inheritance)
-   - Project B: ❌ No access
-   - Cannot delete files: ❌
+Action: Create folder in HR/Employee Handbook
+✅ ALLOWED
+Reason: Admin assigned to HR department
+
+Action: Access Marketing folder
+❌ DENIED
+Reason: Not assigned to Marketing department
+```
+
+**Tom (Dept Head - Engineering):**
+```
+Action: Delete "Project B/Architecture" folder
+✅ ALLOWED
+Reason: Dept Head of Engineering
+
+Action: Assign Folder Manager to "Project A"
+✅ ALLOWED
+Reason: Dept Heads can assign FM/FU in their department
+
+Action: Access HR/Employee Handbook
+❌ DENIED
+Reason: Not his department
+```
+
+**Emma (Folder Manager - Project A):**
+```
+Action: Create subfolder under "API Specs"
+✅ ALLOWED
+Reason: Folder Manager can create subfolders
+
+Action: Delete file in "Requirements" folder
+✅ ALLOWED
+Reason: Has access to all subfolders (inheritance)
+
+Action: Access "Project B" folder
+❌ DENIED
+Reason: Not assigned to Project B
+
+Action: Create root folder in Engineering
+❌ DENIED
+Reason: Folder Managers cannot create root folders
+```
+
+**David (Folder User - Project A):**
+```
+Action: View files in "Design Docs"
+✅ ALLOWED
+Reason: Subfolder inheritance from Project A assignment
+
+Action: Upload document to "API Specs"
+✅ ALLOWED
+Reason: Folder Users can upload
+
+Action: Delete file in "Requirements"
+❌ DENIED
+Reason: Folder Users cannot delete
+
+Action: Create subfolder under "Design Docs"
+❌ DENIED
+Reason: Folder Users cannot create folders
+```
+
+**Sarah (Folder User - Project B):**
+```
+Action: View files in "Project B/Architecture"
+✅ ALLOWED
+Reason: Assigned to Project B with inheritance
+
+Action: Access "Project A/Requirements"
+❌ DENIED
+Reason: Not assigned to Project A (different folder)
+```
 
 5. **Emma creates personal backup**
-   - Creates personal folder "My Project Notes"
+   - Creates personal folder "My Project Notes" (type: PERSONAL)
    - Uploads personal copies for reference
    - Completely private, even Tom cannot see
-   - Emma can share with David if needed
+   - Emma can share with David if needed using sharing system
 
 ---
 
 ### Example 3: HR Confidential Documents
 
 **Scenario:**
-HR needs to manage sensitive employee documents with strict confidentiality.
+HR needs to manage sensitive employee documents with strict confidentiality and folder-level access control.
 
 **Setup:**
 
 **Users:**
+- Mike (Super Admin)
 - Rachel (Dept Head - HR)
 - Kevin (Folder Manager - Recruitment)
 - Nina (Folder User - Payroll)
+- John (Folder Manager - Marketing, not HR)
 
 **Organization Structure:**
 ```
@@ -1021,50 +1499,142 @@ Organization Drive
     │   ├── Candidate Profiles
     │   └── Interview Notes
     ├── Payroll
-    │   └── Salary Data
+    │   ├── Salary Data
+    │   └── Tax Documents
     └── Policies
+        └── Employee Handbook
 ```
 
 **Workflow:**
 
 1. **Rachel creates HR folder structure**
+   - As Dept Head of HR
    - Creates department folders
-   - Sets up sensitive areas: Recruitment, Payroll
+   - Sets up sensitive areas: Recruitment, Payroll, Policies
 
 2. **Kevin assigned to Recruitment only**
-   - Gets Folder Manager access to Recruitment
-   - Can manage candidate files
-   - CANNOT access Payroll (different folder)
+   - Rachel assigns Kevin as FOLDER_MANAGER to "Recruitment" folder
+   - Kevin gets full access to Recruitment
+   - Kevin can manage candidate files
+   - Kevin automatically gets access to:
+     - ✅ Candidate Profiles (subfolder)
+     - ✅ Interview Notes (subfolder)
+   - Kevin CANNOT access:
+     - ❌ Payroll (different folder, not assigned)
+     - ❌ Policies (different folder, not assigned)
 
 3. **Nina assigned to Payroll only**
-   - Gets Folder User access to Payroll
-   - Can view and upload salary documents
-   - CANNOT access Recruitment (different folder)
+   - Rachel assigns Nina as FOLDER_USER to "Payroll" folder
+   - Nina can view and upload salary documents
+   - Nina automatically gets access to:
+     - ✅ Salary Data (subfolder)
+     - ✅ Tax Documents (subfolder)
+   - Nina CANNOT access:
+     - ❌ Recruitment (different folder, not assigned)
+     - ❌ Policies (different folder, not assigned)
+   - Nina CANNOT delete anything (Folder User restriction)
 
-4. **Access isolation:**
+**Access Isolation Examples:**
 
-**Recruitment folder:**
-- Rachel: ✅ Full access (Dept Head)
-- Kevin: ✅ Full access (Folder Manager)
-- Nina: ❌ No access (not assigned)
+**Kevin tries to access Payroll:**
+```javascript
+// Kevin (Folder Manager - Recruitment) tries to view Payroll
+Action: View "HR/Payroll" folder
+❌ DENIED
 
-**Payroll folder:**
-- Rachel: ✅ Full access (Dept Head)
-- Kevin: ❌ No access (not assigned)
-- Nina: ✅ View + Upload (Folder User)
+Validation Flow:
+1. User role: FOLDER_MANAGER
+2. Check folder assignment: Kevin assigned to "Recruitment"
+3. Check if "Payroll" is under "Recruitment": NO
+4. Check parent inheritance: NO
+5. Result: DENY ACCESS
 
-5. **Rachel's personal review notes**
-   - Creates personal folder "Employee Reviews 2024"
+Reason: Folder Managers only access assigned folders
+```
+
+**Nina tries to delete salary document:**
+```javascript
+// Nina (Folder User - Payroll) tries to delete file
+Action: Delete "Salary Data/john-salary.pdf"
+❌ DENIED
+
+Validation Flow:
+1. User role: FOLDER_USER
+2. Check folder access: Nina assigned to "Payroll" ✓
+3. Check subfolder inheritance: "Salary Data" under "Payroll" ✓
+4. Check action permission: FOLDER_USER cannot DELETE
+5. Result: DENY ACTION
+
+Reason: Folder Users can only VIEW and UPLOAD
+```
+
+**Rachel's full access:**
+```javascript
+// Rachel (Dept Head - HR) accesses any HR folder
+Action: View "Recruitment/Candidate Profiles"
+✅ ALLOWED
+
+Action: Delete "Payroll/Tax Documents/old-file.pdf"
+✅ ALLOWED
+
+Action: Create new root folder "Benefits"
+✅ ALLOWED
+
+Reason: Dept Head has full access to entire department
+```
+
+**Mike (Super Admin) accesses HR:**
+```javascript
+// Mike (Super Admin) accesses HR folders
+Action: View "HR/Payroll/Salary Data"
+✅ ALLOWED
+
+Action: Upload to "HR/Recruitment"
+✅ ALLOWED
+
+Reason: Super Admin bypasses all department and folder restrictions
+```
+
+**John (Folder Manager - Marketing) tries HR:**
+```javascript
+// John (Folder Manager in Marketing) tries to access HR
+Action: View "HR/Policies"
+❌ DENIED
+
+Validation Flow:
+1. User role: FOLDER_MANAGER
+2. Check department: HR department, John is Marketing
+3. Check if ADMIN or DEPT_HEAD: NO
+4. Check folder assignment: John not assigned to any HR folder
+5. Result: DENY ACCESS
+
+Reason: Folder Managers from other departments have no access
+```
+
+4. **Rachel's personal review notes**
+   - Creates personal folder "Employee Reviews 2024" (type: PERSONAL)
    - Writes confidential review notes
-   - Even Super Admin cannot access
-   - Can selectively share specific reviews with Kevin
+   - Even Super Admin Mike cannot access (privacy rule)
+   - Rachel can selectively share specific reviews:
+     - Share "Performance Review - Kevin" with Kevin (VIEWER)
+     - Keep other reviews completely private
+
+**Access Summary Table:**
+
+| User | Role | Recruitment | Payroll | Policies | Actions |
+|------|------|-------------|---------|----------|---------|
+| Mike | Super Admin | ✅ Full | ✅ Full | ✅ Full | All |
+| Rachel | Dept Head (HR) | ✅ Full | ✅ Full | ✅ Full | All |
+| Kevin | Folder Manager | ✅ Full | ❌ None | ❌ None | View/Upload/Delete/Create Sub |
+| Nina | Folder User | ❌ None | ✅ Limited | ❌ None | View/Upload only |
+| John | Folder Manager (Mkt) | ❌ None | ❌ None | ❌ None | No access |
 
 ---
 
 ### Example 4: Cross-Department Project
 
 **Scenario:**
-Marketing and Engineering collaborate on product launch.
+Marketing and Engineering need to collaborate on product launch, but they're in different departments.
 
 **Setup:**
 
@@ -1075,392 +1645,120 @@ Marketing and Engineering collaborate on product launch.
 - John (Folder Manager - Marketing)
 - Emma (Folder Manager - Engineering)
 
-**Approach 1: Organization Folder in One Department**
+**Challenge:** How to enable cross-department collaboration?
+
+**Solution 1: Use Admin with Multiple Department Access**
+
 ```
 Organization Drive
 └── Marketing Department
     └── Product Launch 2024
-        ├── Marketing Materials
-        └── Technical Specs
+        ├── Marketing Materials (Marketing team)
+        └── Technical Specs (Engineering team)
 ```
 
-**Problem:** Tom (Engineering Dept Head) cannot access Marketing folders
+**Setup:**
+1. Lisa (Admin assigned to both Marketing and Engineering)
+2. Lisa creates "Product Launch 2024" folder in Marketing
+3. Lisa assigns John (Marketing) as Folder Manager
+4. Lisa assigns Emma (Engineering) as Folder Manager to same folder
+5. Both teams can now collaborate
 
-**Solution:** Lisa (Admin assigned to both departments) can access
-- Lisa creates folder in Marketing
-- Lisa assigns Emma (Engineering) as Folder Manager
-- Now Emma can contribute technical specs
-- Tom still cannot access (not his department)
+**Access:**
+- Sarah: ✅ Full access (Dept Head - Marketing)
+- Tom: ❌ Cannot access (Dept Head - Engineering, different dept)
+- Lisa: ✅ Full access (Admin - both departments)
+- John: ✅ Full access (Folder Manager assigned)
+- Emma: ✅ Full access (Folder Manager assigned)
+
+**Limitation:** Tom (Engineering Dept Head) cannot access because folder is in Marketing department.
 
 ---
 
-**Approach 2: Personal Folder with Sharing**
+**Solution 2: Personal Folder with Sharing (Recommended for Cross-Dept)**
+
 ```
 Sarah's My Drive
-└── Product Launch Collaboration
-    ├── Joint Planning
+└── Product Launch Collaboration (PERSONAL folder)
+    ├── Joint Planning Docs
     └── Shared Resources
 ```
 
-**Solution:**
-- Sarah creates personal folder
-- Shares with Tom (CO_OWNER)
-- Shares with John (EDITOR)
-- Shares with Emma (EDITOR)
-- Everyone can collaborate
-- When finalized, upload to respective departments
+**Setup:**
+1. Sarah creates personal folder "Product Launch Collaboration"
+2. Sarah shares with Tom (CO_OWNER) - Tom can share further
+3. Sarah shares with John (EDITOR) - can modify
+4. Sarah shares with Emma (EDITOR) - can modify
+5. Everyone collaborates in personal folder
+6. When finalized, upload to respective department org folders
 
-**Access:**
-
-**Product Launch Collaboration (Personal):**
-- Sarah: OWNER
-- Tom: CO_OWNER (can share further)
-- John: EDITOR (can modify)
-- Emma: EDITOR (can modify)
+**Access via Sharing:**
+- Sarah: OWNER (created it)
+- Tom: CO_OWNER (shared, can reshare)
+- John: EDITOR (shared, can modify)
+- Emma: EDITOR (shared, can modify)
+- Lisa: Not shared (even as Admin, must be explicitly shared)
 
 **Benefits:**
-- Cross-department collaboration
+- True cross-department collaboration
 - Flexible access control
 - Easy to add/remove collaborators
-- Final assets moved to official locations
+- Final assets can be moved to official dept folders
+
+**Workflow:**
+```
+1. Collaborate in Sarah's personal "Product Launch Collaboration"
+   └── Everyone contributes (shared access)
+
+2. Finalize materials
+   └── Sarah reviews and approves
+
+3. Upload to Organization Drive:
+   ├── Marketing materials → Marketing/Product Launch 2024
+   └── Technical docs → Engineering/Product Documentation
+```
 
 ---
 
 ## 🧪 Edge Cases & Testing Scenarios {#edge-cases}
 
-### Edge Case 1: Nested Folder Access
+### Edge Case 1: Nested Folder Access with Explicit Denial
 
-**Scenario:** User has access to parent folder but child folder is explicitly denied
-
-**Setup:**
-```
-Parent Folder (Engineering)
-└── Child Folder (Confidential)
-```
-
-**Test Cases:**
-
-1. **User assigned to Parent:**
-   - Should access parent: ✅
-   - Should access child (inheritance): ✅
-
-2. **User access revoked from Child:**
-   - Should access parent: ✅
-   - Should access child: ❌ (explicit deny)
-
-3. **User reassigned to Child directly:**
-   - Should access parent: ❌ (not assigned)
-   - Should access child: ✅ (direct assignment)
-
-**Expected Behavior:**
-- Inheritance flows downward (parent → child)
-- Explicit assignment overrides inheritance
-- No upward inheritance (child → parent)
-
----
-
-### Edge Case 2: Share Chain
-
-**Scenario:** User A shares with User B, User B wants to share with User C
+**Scenario:** User has access to parent folder but tries to access sibling folder not assigned to them.
 
 **Setup:**
 ```
-User A (Owner) → User B (CO_OWNER) → User C (?)
+Engineering Department
+├── Projects (root)
+│   ├── Project A
+│   │   └── Requirements
+│   └── Project B
+│       └── Architecture
 ```
 
 **Test Cases:**
 
-1. **B tries to share with C (B is CO_OWNER):**
-   - Should succeed: ✅
-   - C gets access with permission set by B
-
-2. **B tries to share with C (B is EDITOR):**
-   - Should fail: ❌
-   - Only OWNER and CO_OWNER can share
-
-3. **C tries to share with D:**
-   - Depends on C's permission level
-   - If CO_OWNER: ✅ Can share
-   - If EDITOR/VIEWER: ❌ Cannot share
-
-**Expected Behavior:**
-- Share chains are allowed for CO_OWNERs
-- Permission level controls sharing ability
-- Original owner always maintains control
-
----
-
-### Edge Case 3: Department Transfer
-
-**Scenario:** Dept Head moves to different department
-
-**Setup:**
-
-**Initial:**
-- Tom is Dept Head of Engineering
-- Tom has access to all Engineering folders
-
-**Change:**
-- Tom promoted to Dept Head of Marketing
-
-**Test Cases:**
-
-1. **Before department change:**
-   - Tom accesses Engineering folders: ✅
-
-2. **After department change:**
-   - Tom accesses Engineering folders: ❌ (wrong dept)
-   - Tom accesses Marketing folders: ✅ (new dept)
-
-3. **Explicit folder assignments:**
-   - If Tom was explicitly assigned as Folder Manager to Engineering folder
-   - Assignment should remain: ✅
-   - Access source: ASSIGNED_RBAC (not automatic dept access)
-
-**Expected Behavior:**
-- Role-based access follows department assignment
-- Explicit folder assignments remain unless revoked
-- Department transfer doesn't remove explicit assignments
-
----
-
-### Edge Case 4: Circular Folder Structure
-
-**Scenario:** Prevent folder from being its own parent or ancestor
-
-**Test Cases:**
-
-1. **Direct circular reference:**
+**Test 1: Folder Manager assigned to Project A**
 ```
-Folder A
-└── Move to parent: Folder A
+User: Emma (Folder Manager)
+Assignment: Project A
+
+Attempt: Access "Project A/Requirements"
+Expected: ✅ ALLOWED (inheritance from Project A)
+
+Attempt: Access "Project B"
+Expected: ❌ DENIED (sibling folder, not in inheritance chain)
+
+Attempt: Access "Projects" (parent)
+Expected: ❌ DENIED (no upward inheritance)
 ```
-   - Should fail: ❌
-   - Error: "Folder cannot be its own parent"
 
-2. **Indirect circular reference:**
+**Test 2: Folder User assigned to Project B/Architecture**
 ```
-Folder A
-└── Folder B
-    └── Folder C
-        └── Move Folder A here
-```
-   - Should fail: ❌
-   - Error: "Circular reference detected"
+User: David (Folder User)
+Assignment: Project B/Architecture
 
-3. **Valid move:**
-```
-Folder A → Folder D (unrelated)
-```
-   - Should succeed: ✅
+Attempt: Access "Project B/Architecture"
+Expected: ✅ ALLOWED (direct assignment)
 
-**Expected Behavior:**
-- Validate parent chain before move
-- Prevent any circular references
-- Check all ancestors recursively
-
----
-
-### Edge Case 5: Simultaneous Share and Revoke
-
-**Scenario:** Owner shares folder, then immediately revokes while recipient is accessing
-
-**Test Cases:**
-
-1. **Share created, recipient hasn't accessed yet:**
-   - Share: ✅ Created
-   - Revoke: ✅ Access removed
-   - Recipient tries to access: ❌ No access
-
-2. **Recipient actively using shared folder:**
-   - Recipient viewing files
-   - Owner revokes share
-   - Current session: ✅ Can continue (cached)
-   - Next request: ❌ Access denied
-   - Folder removed from "Shared with Me"
-
-3. **Share updated instead of revoked:**
-   - Owner changes EDITOR → VIEWER
-   - Recipient trying to upload: ❌ Permission denied
-   - Recipient viewing: ✅ Still works
-
-**Expected Behavior:**
-- Revocation takes effect on next request
-- Current session may complete
-- Clear error messages to user
-- Remove from shared views immediately
-
----
-
-### Edge Case 6: File Upload During Permission Change
-
-**Scenario:** User uploading file when their permission changes
-
-**Test Cases:**
-
-1. **Upload started with EDITOR permission:**
-   - Permission changed to VIEWER mid-upload
-   - Upload completes: ❌ Fail at finalization
-   - Error: "Permission changed during upload"
-
-2. **Upload started with VIEWER permission:**
-   - Should fail immediately: ❌
-   - Error: "Insufficient permissions"
-
-3. **Folder deleted during upload:**
-   - Upload should fail: ❌
-   - Error: "Folder no longer exists"
-
-**Expected Behavior:**
-- Check permissions at upload start
-- Verify permissions at upload completion
-- Handle gracefully with clear errors
-- Don't leave partial uploads
-
----
-
-### Edge Case 7: Soft Delete and Undelete
-
-**Scenario:** Folder deleted, then user tries to access or undelete
-
-**Test Cases:**
-
-1. **Owner deletes folder:**
-   - Folder marked: isDeleted = true
-   - Owner can see in trash: ✅
-   - Others cannot see: ❌
-
-2. **Shared users access deleted folder:**
-   - All shared users lose access
-   - Removed from "Shared with Me"
-   - Error if direct access: "Folder not found"
-
-3. **Owner restores folder:**
-   - Set isDeleted = false
-   - All shares reactivate: ✅
-   - Shared users can access again
-
-4. **Permanent delete (30 days passed):**
-   - Hard delete folder
-   - Delete all files
-   - Remove all shares
-   - Remove all access records
-   - Cannot undelete: ❌
-
-**Expected Behavior:**
-- Soft delete preserves structure
-- Shares preserved during soft delete
-- Hard delete is permanent
-- Audit log retained even after hard delete
-
----
-
-### Edge Case 8: Role Demotion
-
-**Scenario:** Admin demoted to Folder User
-
-**Setup:**
-
-**Initial:**
-- User is ADMIN
-- Has access to multiple departments
-
-**Change:**
-- User demoted to FOLDER_USER
-
-**Test Cases:**
-
-1. **Before demotion:**
-   - Access all folders in assigned departments: ✅
-
-2. **After demotion:**
-   - Access department folders: ❌ (role changed)
-   - Only assigned folders accessible: ✅
-
-3. **Explicit assignments:**
-   - If explicitly assigned as Folder Manager before demotion
-   - Assignment remains: ✅ (not revoked)
-
-4. **Try to assign others:**
-   - Should fail: ❌
-   - Error: "Insufficient permissions"
-
-**Expected Behavior:**
-- Role change revokes automatic access
-- Explicit assignments remain
-- Cannot perform actions above new role level
-- Audit log tracks demotion
-
----
-
-### Testing Checklist
-
-#### Unit Tests:
-- ☑ Folder model validation
-- ☑ Access control logic
-- ☑ RBAC permission checking
-- ☑ Share permission validation
-- ☑ File access through folder permissions
-- ☑ Inheritance logic
-- ☑ Soft delete functionality
-
-#### Integration Tests:
-- ☑ Create personal folder and share
-- ☑ Create org folder and assign users
-- ☑ Upload file and check access
-- ☑ Revoke share and verify access removed
-- ☑ Department-based access control
-- ☑ Role-based access scenarios
-- ☑ Move folder and verify permissions
-
-#### End-to-End Tests:
-- ☑ Complete sharing workflow
-- ☑ Complete folder assignment workflow
-- ☑ File upload and download flow
-- ☑ Search across all drives
-- ☑ Recently accessed functionality
-- ☑ Breadcrumb navigation
-- ☑ Bulk operations
-
-#### Performance Tests:
-- ☑ Large folder hierarchy (1000+ folders)
-- ☑ Many shares (100+ users)
-- ☑ Concurrent uploads
-- ☑ Search performance
-- ☑ Query optimization
-- ☑ Index usage
-
-#### Security Tests:
-- ☑ Unauthorized access attempts
-- ☑ SQL injection attempts
-- ☑ XSS prevention
-- ☑ CSRF protection
-- ☑ File upload malware scanning
-- ☑ Rate limiting
-- ☑ Session hijacking prevention
-
----
-
-## 📝 Summary
-
-This DMS Hybrid System provides:
-
-✅ **Personal Drive** - Private workspace with selective sharing  
-✅ **Organization Drive** - Department-based with 5-role RBAC  
-✅ **Flexible Sharing** - Granular permissions (Owner/Co-Owner/Editor/Viewer)  
-✅ **Strong Privacy** - Super Admin cannot access personal folders  
-✅ **Clear Access Control** - Two-layer system (storage + access)  
-✅ **Audit Trail** - Complete tracking of all actions  
-✅ **Scalable Architecture** - Supports growth and new features
-
-### Key Principles:
-
-- Privacy first for personal folders
-- Role-based access for organization folders
-- Explicit permissions over implicit
-- Audit everything
-- Fail secure
-
----
-
-**End of Documentation**
+Attempt: Access "Project B" (parent)
