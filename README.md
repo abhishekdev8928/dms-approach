@@ -13,11 +13,8 @@
 5. [Access Control Logic](#access-control-logic)
 6. [Folder Sharing System](#folder-sharing-system)
 7. [RBAC for Organization Drive](#rbac-organization)
-8. [API Design Strategy](#api-design-strategy)
-9. [Implementation Roadmap](#implementation-roadmap)
-10. [Security & Privacy Rules](#security-rules)
-11. [Real-World Examples](#real-examples)
-12. [Edge Cases & Testing Scenarios](#edge-cases)
+8. [Real-World Examples](#real-examples)
+9. [Edge Cases & Testing Scenarios](#edge-cases)
 
 ---
 
@@ -33,11 +30,10 @@ A Hybrid Document Management System with three main components:
 
 ### Key Design Decisions
 
-✅ Personal folders CAN be shared with other users  
-✅ Organization folders CAN ALSO be shared if needed (special feature)  
-✅ NO promotion from personal to organization folders  
-✅ Super Admin CANNOT see personal folders (privacy first)  
-✅ Two distinct folder types - PERSONAL and ORGANIZATION
+- ✅ Personal folders CAN be shared with other users
+- ✅ NO promotion from personal to organization folders
+- ✅ Super Admin CANNOT see personal folders (privacy first)
+- ✅ Two distinct folder types - PERSONAL and ORGANIZATION
 
 ### System Architecture Diagram
 
@@ -62,9 +58,6 @@ A Hybrid Document Management System with three main components:
 │  │ • Super Admin      │         │       │ • Department     │   │
 │  │   NO access        │         │       │   based          │   │
 │  │                    │         │       │                  │   │
-│  │                    │         │       │ • Can also be    │   │
-│  │                    │         │       │   shared         │   │
-│  │                    │         │       │   (special)      │   │
 │  └────────────────────┘         │       └──────────────────┘   │
 │                                 │                              │
 │                    ┌────────────▼──────────┐                   │
@@ -73,9 +66,6 @@ A Hybrid Document Management System with three main components:
 │                    │                       │                   │
 │                    │ • Share personal      │                   │
 │                    │   folders             │                   │
-│                    │                       │                   │
-│                    │ • Share organization  │                   │
-│                    │   folders (special)   │                   │
 │                    │                       │                   │
 │                    │ • Grant permissions:  │                   │
 │                    │   - VIEWER            │                   │
@@ -98,7 +88,6 @@ A Hybrid Document Management System with three main components:
 Every folder in your system is ONE of these two types:
 
 #### PERSONAL Folder
-
 - Created in "My Drive"
 - Completely private by default
 - You are the owner
@@ -109,14 +98,13 @@ Every folder in your system is ONE of these two types:
 **Think of it like:** Your personal diary - only you can read it unless you show it to someone
 
 #### ORGANIZATION Folder
-
 - Created in "Organization Drive"
 - Belongs to a department
 - Access controlled by user roles (RBAC)
 - Visible to people based on their job role
-- **Can ALSO be shared with specific users (special feature)**
+- Cannot be shared like personal folders
 
-**Think of it like:** Company filing cabinet - access depends on your job position, but can also be selectively shared
+**Think of it like:** Company filing cabinet - access depends on your job position
 
 ---
 
@@ -125,20 +113,17 @@ Every folder in your system is ONE of these two types:
 We use a two-layer access control system:
 
 #### Layer 1: Folder Storage
-
 - Stores the folder metadata (name, type, owner, department)
 - Defines what type of folder it is
 - Links to parent folder (for hierarchy)
 
 #### Layer 2: Access Control
-
 - Defines WHO can access WHAT folder
 - Stores permission level (Owner/Co-Owner/Editor/Viewer)
 - Tracks HOW access was granted (Created/Assigned/Shared)
 - Handles expiry and revocation
 
 **Why two layers?**
-
 - **Flexibility:** Easy to add/remove access without touching folder data
 - **Audit:** Complete history of who accessed what and when
 - **Performance:** Efficient queries for "what folders can user X see?"
@@ -152,9 +137,9 @@ Every folder access comes from one of three sources:
 
 1. **CREATED:** User created the folder (becomes OWNER)
 2. **ASSIGNED_RBAC:** Admin/Dept Head assigned folder access in organization
-3. **SHARED:** Another user shared their folder with you (personal or organization)
+3. **SHARED:** Another user shared their personal folder with you
 
-#### Access Source Flow:
+**Access Source Flow:**
 
 ```
 Personal Folder:
@@ -162,8 +147,6 @@ Personal Folder:
 
 Organization Folder:
   Create → CREATED (Creator gets owner) → Admin Assigns → ASSIGNED_RBAC
-  OR
-  Create → CREATED → Owner Shares → SHARED (special case)
 ```
 
 ---
@@ -178,7 +161,7 @@ Four levels of access for any folder:
 │ ├─ View files & folders                          │
 │ ├─ Upload/Edit/Delete files                      │
 │ ├─ Create/Delete subfolders                      │
-│ ├─ Share folder with others                      │
+│ ├─ Share folder with others (personal only)      │
 │ └─ Manage all permissions                        │
 └──────────────────────────────────────────────────┘
 
@@ -187,7 +170,7 @@ Four levels of access for any folder:
 │ ├─ View files & folders                          │
 │ ├─ Upload/Edit/Delete files                      │
 │ ├─ Create/Delete subfolders                      │
-│ ├─ Share folder with others                      │
+│ ├─ Share folder with others (personal only)      │
 │ └─ Cannot manage owner permissions               │
 └──────────────────────────────────────────────────┘
 
@@ -215,13 +198,11 @@ Four levels of access for any folder:
 
 We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 
-✅ **Requirement Met:** Both personal and organization folder sharing with granular permissions  
-✅ **Scalability:** Easy to add new permission levels  
-✅ **Flexibility:** Grant/revoke access without touching folder structure  
-✅ **Audit:** Complete trail of who accessed what  
-✅ **Performance:** Efficient queries with proper indexing
-
----
+- ✅ **Requirement Met:** Personal folder sharing with granular permissions
+- ✅ **Scalability:** Easy to add new permission levels
+- ✅ **Flexibility:** Grant/revoke access without touching folder structure
+- ✅ **Audit:** Complete trail of who accessed what
+- ✅ **Performance:** Efficient queries with proper indexing
 
 ### Three-Layer Architecture
 
@@ -246,11 +227,8 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 │  • RBAC for Organization folders                       │
 │  • Ownership check for Personal folders                │
 │  • Share permission validation                         │
-│  • Special: Organization folder sharing                │
 └─────────────────────────────────────────────────────────┘
 ```
-
----
 
 ### System Flow Diagram
 
@@ -305,8 +283,6 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 └──────────────────────────────────────────────────────┘
 ```
 
----
-
 ### Collections Overview
 
 ```
@@ -354,8 +330,16 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 
 **Purpose:** Store all folders (both personal and organization)
 
-**Important Business Rules:**
+**Schema Overview:**
+- Folder metadata (name, description)
+- Folder type (PERSONAL/ORGANIZATION)
+- Ownership information
+- Hierarchy (parent-child relationships)
+- Department association (for org folders)
+- Soft delete support
+- Timestamps
 
+**Important Business Rules:**
 - Organization folders MUST have a department
 - Personal folders MUST NOT have a department
 - Parent folder must be same type as child folder
@@ -367,12 +351,20 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 
 **Purpose:** Control who can access which folder with what permissions
 
-**Important Business Rules:**
+**Schema Overview:**
+- Folder and user references
+- Permission level (OWNER/CO_OWNER/EDITOR/VIEWER)
+- Access source tracking (CREATED/ASSIGNED_RBAC/SHARED)
+- Grant metadata (who granted, when)
+- Expiry support
+- Active status flag
+- Timestamps
 
+**Important Business Rules:**
 - One user can have only ONE active access type per folder
-- Unique compound index on: `folderId + userId`
-- When access expires, `isActive` becomes false automatically
-- Access can be revoked by setting `isActive` to false
+- Unique compound index on: folderId + userId
+- When access expires, isActive becomes false automatically
+- Access can be revoked by setting isActive to false
 
 **Permission Matrix:**
 
@@ -391,12 +383,19 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 
 ### Model 3: FolderShare
 
-**Purpose:** Track folder sharing with metadata (for both personal and organization folders)
+**Purpose:** Track personal folder sharing with metadata
+
+**Schema Overview:**
+- Folder reference
+- Sharer and recipient references
+- Permission level granted
+- Share message/notes
+- Active status tracking
+- Revocation metadata
+- Timestamps
 
 **Important Business Rules:**
-
-- Can share PERSONAL folders
-- Can also share ORGANIZATION folders (special feature)
+- Can only share PERSONAL folders
 - Cannot share with yourself
 - Permission level cannot be OWNER (only original owner keeps OWNER)
 - When share is revoked, corresponding FolderAccess is also deactivated
@@ -408,8 +407,16 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 
 **Purpose:** Store uploaded files metadata
 
-**Important Business Rules:**
+**Schema Overview:**
+- File identification (name, original name)
+- Parent folder reference
+- Upload metadata (who uploaded, when)
+- Storage location (S3 URL or local path)
+- File properties (size, MIME type, extension)
+- Soft delete support
+- Timestamps
 
+**Important Business Rules:**
 - Files inherit access permissions from parent folder
 - Soft delete preserves file metadata
 - File size tracked in bytes for quota management
@@ -421,12 +428,17 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 
 **Purpose:** Store user information and role assignments
 
-**Important Business Rules:**
+**Relevant Fields for DMS:**
+- User identification (name, email)
+- Role assignment (SUPER_ADMIN/ADMIN/DEPT_HEAD/FOLDER_MANAGER/FOLDER_USER)
+- Department associations
+- Account status
 
+**Important Business Rules:**
 - DEPT_HEAD: Assigned to ONE department
 - ADMIN: Can be assigned to MULTIPLE departments
 - Role determines access to organization folders
-- `isActive` flag controls account access
+- isActive flag controls account access
 
 ---
 
@@ -434,12 +446,17 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 
 **Purpose:** Store department information
 
-**Important Business Rules:**
+**Schema Overview:**
+- Department identification (name, code)
+- Description
+- Department head reference
+- Active status
 
+**Important Business Rules:**
 - Each department has one head (DEPT_HEAD role)
 - Department code must be unique
 - Used for organization folder categorization
-- `isActive` controls department visibility
+- isActive controls department visibility
 
 ---
 
@@ -498,8 +515,6 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 └──────┘ └──────┘          └──────┘ └──────┘
 ```
 
----
-
 ### Access Control Logic Overview
 
 #### For PERSONAL Folders:
@@ -510,49 +525,42 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 
 **Step 2:** Check FolderAccess table
 - Look for active access record for this user
-- Check if access has expired (compare `expiresAt` with current date)
+- Check if access has expired (compare expiresAt with current date)
 - If found and valid → Grant access based on permission level
 - If not found → DENY access
 
 **Important:** Super Admin CANNOT access personal folders (privacy first)
 
----
-
 #### For ORGANIZATION Folders:
 
 **Step 1:** Check user role
 
-- **If SUPER_ADMIN:**
-  - Full access to all organization folders
-  - Can VIEW, UPLOAD, DELETE, CREATE_FOLDER, MANAGE_USERS
-  - No department restrictions
+**If SUPER_ADMIN:**
+- Full access to all organization folders
+- Can VIEW, UPLOAD, DELETE, CREATE_FOLDER, MANAGE_USERS
+- No department restrictions
 
-- **If ADMIN:**
-  - Check if user is assigned to this folder's department
-  - If YES → Can VIEW, UPLOAD, DELETE, CREATE_FOLDER, ASSIGN_FOLDER_MANAGER
-  - If NO → Check FolderAccess for shared access
+**If ADMIN:**
+- Check if user is assigned to this folder's department
+- If YES → Can VIEW, UPLOAD, DELETE, CREATE_FOLDER, ASSIGN_FOLDER_MANAGER
+- If NO → DENY
 
-- **If DEPT_HEAD:**
-  - Check if this is their assigned department
-  - If YES → Can VIEW, UPLOAD, DELETE, CREATE_FOLDER, ASSIGN_FOLDER_MANAGER
-  - If NO → Check FolderAccess for shared access
+**If DEPT_HEAD:**
+- Check if this is their assigned department
+- If YES → Can VIEW, UPLOAD, DELETE, CREATE_FOLDER, ASSIGN_FOLDER_MANAGER
+- If NO → DENY
 
-- **If FOLDER_MANAGER:**
-  - Check FolderAccess table for direct assignment
-  - Also check parent folders (inheritance)
-  - If found → Can VIEW, UPLOAD, DELETE, CREATE_SUBFOLDER
+**If FOLDER_MANAGER:**
+- Check FolderAccess table for direct assignment
+- Also check parent folders (inheritance)
+- If found → Can VIEW, UPLOAD, DELETE, CREATE_SUBFOLDER
+- If not found → DENY
 
-- **If FOLDER_USER:**
-  - Check FolderAccess table for direct assignment
-  - Also check parent folders (inheritance)
-  - If found → Can VIEW, UPLOAD
-
-**Step 2:** Check for shared access (special case)
-- Organization folders can also be shared
-- Check FolderAccess table for SHARED access source
-- Grant permissions based on share level
-
----
+**If FOLDER_USER:**
+- Check FolderAccess table for direct assignment
+- Also check parent folders (inheritance)
+- If found → Can VIEW, UPLOAD
+- If not found → DENY
 
 ### Role Permissions Matrix
 
@@ -572,21 +580,19 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 
 ## 🤝 Folder Sharing System {#folder-sharing-system}
 
-### How Folder Sharing Works
+### How Personal Folder Sharing Works
 
 ```
 ┌─────────────────────────────────────────────────┐
 │            FOLDER SHARING WORKFLOW              │
 ├─────────────────────────────────────────────────┤
 │                                                 │
-│  1. User A (Owner) shares folder with User B   │
+│  1. User A (Owner) shares "My Docs" with User B│
 │     ↓                                           │
 │  2. System verifies:                            │
-│     • User A has permission to share            │
-│       (OWNER/CO_OWNER)                          │
-│     • User B is not User A (can't share with    │
-│       self)                                     │
-│     • For ORG folders: additional checks        │
+│     • Folder is PERSONAL type                   │
+│     • User A has permission to share (OWNER/CO_OWNER)│
+│     • User B is not User A (can't share with self)│
 │     ↓                                           │
 │  3. Create FolderShare record                   │
 │     • Store share metadata                      │
@@ -596,14 +602,12 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 │     • Grant permission level                    │
 │     • Set accessSource = SHARED                 │
 │     ↓                                           │
-│  5. User B can now access folder                │
+│  5. User B can now access "My Docs"            │
 │     • Folder appears in "Shared with Me"       │
 │     • Access level based on permission given    │
 │                                                 │
 └─────────────────────────────────────────────────┘
 ```
-
----
 
 ### Share Permission Levels
 
@@ -618,67 +622,58 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 └─────────────┴──────┴────────┴────────┴───────┴─────────┘
 ```
 
----
-
 ### Sharing Rules
 
-#### ✅ CAN Share:
-
+**✅ CAN Share:**
 - OWNER can share with anyone
 - CO_OWNER can share with anyone
-- Can share PERSONAL folders
-- **Can share ORGANIZATION folders (special feature)**
 - Can share with multiple users
 - Can set different permission levels for different users
 - Can update existing share permissions
 
-#### ❌ CANNOT Share:
-
+**❌ CANNOT Share:**
 - EDITOR cannot share
 - VIEWER cannot share
-- FOLDER_MANAGER cannot share organization folders (unless they're OWNER/CO_OWNER)
+- FOLDER_MANAGER cannot share (they manage assigned folders only)
+- Cannot share organization folders (only personal folders)
 - Cannot share with yourself
-
----
 
 ### Sharing Workflow Steps
 
-**Step 1:** Initiate Share
-- User clicks "Share" on a folder
+**Step 1: Initiate Share**
+- User clicks "Share" on a personal folder
 - System shows share dialog with user search
 
-**Step 2:** Select User and Permission
+**Step 2: Select User and Permission**
 - Search and select user to share with
 - Choose permission level (VIEWER/EDITOR/CO_OWNER)
 - Optional: Add share message
 
-**Step 3:** System Validation
+**Step 3: System Validation**
+- Verify folder is PERSONAL type
 - Verify current user can share (OWNER or CO_OWNER)
 - Verify not sharing with self
 - Check if already shared (update existing or create new)
-- For organization folders: verify department-level permissions
 
-**Step 4:** Create Records
+**Step 4: Create Records**
 - Create/Update FolderShare record
 - Create/Update FolderAccess record
-- Set `accessSource = SHARED`
+- Set accessSource = SHARED
 
-**Step 5:** Notification
+**Step 5: Notification**
 - Notify recipient about shared folder
 - Include share message if provided
 
----
-
 ### Revoking Share
 
-**Step 1:** Initiate Revoke
+**Step 1: Initiate Revoke**
 - Owner/CO_OWNER clicks "Revoke" on shared user
 
-**Step 2:** System Updates
-- Update FolderShare: Set `isActive = false`, add `revokedAt`, `revokedBy`
-- Update FolderAccess: Set `isActive = false`
+**Step 2: System Updates**
+- Update FolderShare: Set isActive = false, add revokedAt, revokedBy
+- Update FolderAccess: Set isActive = false
 
-**Step 3:** Access Removed
+**Step 3: Access Removed**
 - User can no longer access the folder
 - Folder removed from their "Shared with Me" view
 
@@ -701,8 +696,6 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
                       │
                  FOLDER_USER
 ```
-
----
 
 ### Role Descriptions
 
@@ -740,8 +733,6 @@ We're using **Approach 3: Enterprise Grade with Access Control Table** because:
 - **Permissions:** VIEW, UPLOAD (read and add only)
 - **Inheritance:** Access to subfolders automatically
 - **Limitations:** Cannot delete or create folders
-
----
 
 ### Department-Based Access
 
@@ -789,8 +780,6 @@ Company
    - → Cannot DELETE or CREATE folders
    - → NO access to Project-B
 
----
-
 ### Folder Assignment Flow
 
 ```
@@ -809,7 +798,7 @@ Company
 │  4. Create FolderAccess record:                 │
 │     • folderId = selected folder                │
 │     • userId = selected user                    │
-│     • accessType = FOLDER_MANAGER or EDITOR     │
+│     • accessType = FOLDER_MANAGER or EDITOR/VIEWER│
 │     • accessSource = ASSIGNED_RBAC              │
 │     • grantedBy = current admin/dept_head       │
 │     ↓                                           │
@@ -819,8 +808,6 @@ Company
 │                                                 │
 └─────────────────────────────────────────────────┘
 ```
-
----
 
 ### Access Inheritance in Organization Folders
 
@@ -842,3 +829,638 @@ If Folder User is assigned to "Project-A":
 ❌ Cannot access "Projects" (parent)
 ❌ Cannot access "Project-B" (sibling)
 ```
+
+---
+
+## 💡 Real-World Examples {#real-examples}
+
+### Example 1: Marketing Team Collaboration
+
+**Scenario:**
+Marketing department needs to collaborate on campaign materials. Some assets are personal drafts, others are official department assets.
+
+**Setup:**
+
+**Users:**
+- Sarah (Dept Head - Marketing)
+- John (Folder Manager)
+- Alice (Folder User)
+- Bob (Freelancer - external)
+
+**Organization Structure:**
+```
+Organization Drive
+└── Marketing Department
+    ├── Q4 Campaigns (org folder)
+    │   ├── Social Media Assets
+    │   └── Email Templates
+    └── Brand Guidelines (org folder)
+```
+
+**Personal Work:**
+```
+Sarah's My Drive
+└── Campaign Drafts (personal folder)
+    ├── Draft-1.psd
+    └── Draft-2.psd
+```
+
+**Workflow:**
+
+1. **Sarah creates campaign draft in her personal drive**
+   - Creates "Campaign Drafts" folder
+   - Uploads draft designs
+   - Folder is completely private
+
+2. **Sarah shares draft with John for feedback**
+   - Shares "Campaign Drafts" with John
+   - Grants EDITOR permission
+   - John can now view and add comments
+   - Folder appears in John's "Shared with Me"
+
+3. **John reviews and approves**
+   - Accesses folder from "Shared with Me"
+   - Reviews files
+   - Uploads revised versions
+
+4. **Sarah shares with Bob (freelancer)**
+   - Shares same folder with Bob
+   - Grants VIEWER permission only
+   - Bob can view but not modify
+
+5. **Final assets moved to organization**
+   - Sarah uploads final assets to "Q4 Campaigns"
+   - John (Folder Manager) organizes them
+   - Alice (Folder User) can view and download
+   - Bob cannot access organization folders
+
+**Access Summary:**
+
+**Campaign Drafts (Personal):**
+- Sarah: OWNER
+- John: EDITOR (shared)
+- Bob: VIEWER (shared)
+- Alice: NO ACCESS
+- Super Admin: NO ACCESS (privacy)
+
+**Q4 Campaigns (Organization):**
+- Sarah: Full access (Dept Head)
+- John: Full access (Folder Manager assigned)
+- Alice: View + Upload (Folder User assigned)
+- Bob: NO ACCESS (not in organization)
+- Super Admin: Full access
+
+---
+
+### Example 2: Engineering Documentation
+
+**Scenario:**
+Engineering team manages project documentation with strict access control.
+
+**Setup:**
+
+**Users:**
+- Mike (Super Admin)
+- Lisa (Admin - Engineering + HR)
+- Tom (Dept Head - Engineering)
+- Emma (Folder Manager - Project A)
+- David (Folder User - Project A)
+
+**Organization Structure:**
+```
+Organization Drive
+├── Engineering Department
+│   ├── Project A Documentation
+│   │   ├── Requirements
+│   │   ├── Design Docs
+│   │   └── API Specs
+│   ├── Project B Documentation
+│   └── Internal Tools
+└── HR Department
+    └── Employee Handbook
+```
+
+**Workflow:**
+
+1. **Tom creates Project A folder structure**
+   - As Dept Head, creates "Project A Documentation"
+   - Creates subfolders: Requirements, Design Docs, API Specs
+   - All inherit Engineering department access
+
+2. **Tom assigns Emma as Folder Manager**
+   - Emma gets full control of Project A folder
+   - Can manage files and subfolders
+   - Access automatically includes all subfolders
+
+3. **Emma assigns David as Folder User**
+   - David gets view + upload access
+   - Can contribute documents
+   - Cannot delete or reorganize
+
+4. **Access scenarios:**
+
+   **Mike (Super Admin):**
+   - Can access ALL organization folders
+   - Project A: ✅ Full access
+   - Project B: ✅ Full access
+   - HR Handbook: ✅ Full access
+
+   **Lisa (Admin - Engineering + HR):**
+   - Can access assigned departments
+   - Project A: ✅ Full access
+   - Project B: ✅ Full access
+   - HR Handbook: ✅ Full access
+   - Other departments: ❌ No access
+
+   **Tom (Dept Head - Engineering):**
+   - Can access only Engineering department
+   - Project A: ✅ Full access
+   - Project B: ✅ Full access
+   - HR Handbook: ❌ No access (different dept)
+
+   **Emma (Folder Manager - Project A):**
+   - Can access only assigned folders
+   - Project A: ✅ Full access (assigned)
+   - Requirements: ✅ Full access (inheritance)
+   - Design Docs: ✅ Full access (inheritance)
+   - Project B: ❌ No access (not assigned)
+
+   **David (Folder User - Project A):**
+   - Can access only assigned folders
+   - Project A: ✅ View + Upload
+   - Requirements: ✅ View + Upload (inheritance)
+   - Design Docs: ✅ View + Upload (inheritance)
+   - Project B: ❌ No access
+   - Cannot delete files: ❌
+
+5. **Emma creates personal backup**
+   - Creates personal folder "My Project Notes"
+   - Uploads personal copies for reference
+   - Completely private, even Tom cannot see
+   - Emma can share with David if needed
+
+---
+
+### Example 3: HR Confidential Documents
+
+**Scenario:**
+HR needs to manage sensitive employee documents with strict confidentiality.
+
+**Setup:**
+
+**Users:**
+- Rachel (Dept Head - HR)
+- Kevin (Folder Manager - Recruitment)
+- Nina (Folder User - Payroll)
+
+**Organization Structure:**
+```
+Organization Drive
+└── HR Department
+    ├── Recruitment
+    │   ├── Candidate Profiles
+    │   └── Interview Notes
+    ├── Payroll
+    │   └── Salary Data
+    └── Policies
+```
+
+**Workflow:**
+
+1. **Rachel creates HR folder structure**
+   - Creates department folders
+   - Sets up sensitive areas: Recruitment, Payroll
+
+2. **Kevin assigned to Recruitment only**
+   - Gets Folder Manager access to Recruitment
+   - Can manage candidate files
+   - CANNOT access Payroll (different folder)
+
+3. **Nina assigned to Payroll only**
+   - Gets Folder User access to Payroll
+   - Can view and upload salary documents
+   - CANNOT access Recruitment (different folder)
+
+4. **Access isolation:**
+
+**Recruitment folder:**
+- Rachel: ✅ Full access (Dept Head)
+- Kevin: ✅ Full access (Folder Manager)
+- Nina: ❌ No access (not assigned)
+
+**Payroll folder:**
+- Rachel: ✅ Full access (Dept Head)
+- Kevin: ❌ No access (not assigned)
+- Nina: ✅ View + Upload (Folder User)
+
+5. **Rachel's personal review notes**
+   - Creates personal folder "Employee Reviews 2024"
+   - Writes confidential review notes
+   - Even Super Admin cannot access
+   - Can selectively share specific reviews with Kevin
+
+---
+
+### Example 4: Cross-Department Project
+
+**Scenario:**
+Marketing and Engineering collaborate on product launch.
+
+**Setup:**
+
+**Users:**
+- Sarah (Dept Head - Marketing)
+- Tom (Dept Head - Engineering)
+- Lisa (Admin - Marketing + Engineering)
+- John (Folder Manager - Marketing)
+- Emma (Folder Manager - Engineering)
+
+**Approach 1: Organization Folder in One Department**
+```
+Organization Drive
+└── Marketing Department
+    └── Product Launch 2024
+        ├── Marketing Materials
+        └── Technical Specs
+```
+
+**Problem:** Tom (Engineering Dept Head) cannot access Marketing folders
+
+**Solution:** Lisa (Admin assigned to both departments) can access
+- Lisa creates folder in Marketing
+- Lisa assigns Emma (Engineering) as Folder Manager
+- Now Emma can contribute technical specs
+- Tom still cannot access (not his department)
+
+---
+
+**Approach 2: Personal Folder with Sharing**
+```
+Sarah's My Drive
+└── Product Launch Collaboration
+    ├── Joint Planning
+    └── Shared Resources
+```
+
+**Solution:**
+- Sarah creates personal folder
+- Shares with Tom (CO_OWNER)
+- Shares with John (EDITOR)
+- Shares with Emma (EDITOR)
+- Everyone can collaborate
+- When finalized, upload to respective departments
+
+**Access:**
+
+**Product Launch Collaboration (Personal):**
+- Sarah: OWNER
+- Tom: CO_OWNER (can share further)
+- John: EDITOR (can modify)
+- Emma: EDITOR (can modify)
+
+**Benefits:**
+- Cross-department collaboration
+- Flexible access control
+- Easy to add/remove collaborators
+- Final assets moved to official locations
+
+---
+
+## 🧪 Edge Cases & Testing Scenarios {#edge-cases}
+
+### Edge Case 1: Nested Folder Access
+
+**Scenario:** User has access to parent folder but child folder is explicitly denied
+
+**Setup:**
+```
+Parent Folder (Engineering)
+└── Child Folder (Confidential)
+```
+
+**Test Cases:**
+
+1. **User assigned to Parent:**
+   - Should access parent: ✅
+   - Should access child (inheritance): ✅
+
+2. **User access revoked from Child:**
+   - Should access parent: ✅
+   - Should access child: ❌ (explicit deny)
+
+3. **User reassigned to Child directly:**
+   - Should access parent: ❌ (not assigned)
+   - Should access child: ✅ (direct assignment)
+
+**Expected Behavior:**
+- Inheritance flows downward (parent → child)
+- Explicit assignment overrides inheritance
+- No upward inheritance (child → parent)
+
+---
+
+### Edge Case 2: Share Chain
+
+**Scenario:** User A shares with User B, User B wants to share with User C
+
+**Setup:**
+```
+User A (Owner) → User B (CO_OWNER) → User C (?)
+```
+
+**Test Cases:**
+
+1. **B tries to share with C (B is CO_OWNER):**
+   - Should succeed: ✅
+   - C gets access with permission set by B
+
+2. **B tries to share with C (B is EDITOR):**
+   - Should fail: ❌
+   - Only OWNER and CO_OWNER can share
+
+3. **C tries to share with D:**
+   - Depends on C's permission level
+   - If CO_OWNER: ✅ Can share
+   - If EDITOR/VIEWER: ❌ Cannot share
+
+**Expected Behavior:**
+- Share chains are allowed for CO_OWNERs
+- Permission level controls sharing ability
+- Original owner always maintains control
+
+---
+
+### Edge Case 3: Department Transfer
+
+**Scenario:** Dept Head moves to different department
+
+**Setup:**
+
+**Initial:**
+- Tom is Dept Head of Engineering
+- Tom has access to all Engineering folders
+
+**Change:**
+- Tom promoted to Dept Head of Marketing
+
+**Test Cases:**
+
+1. **Before department change:**
+   - Tom accesses Engineering folders: ✅
+
+2. **After department change:**
+   - Tom accesses Engineering folders: ❌ (wrong dept)
+   - Tom accesses Marketing folders: ✅ (new dept)
+
+3. **Explicit folder assignments:**
+   - If Tom was explicitly assigned as Folder Manager to Engineering folder
+   - Assignment should remain: ✅
+   - Access source: ASSIGNED_RBAC (not automatic dept access)
+
+**Expected Behavior:**
+- Role-based access follows department assignment
+- Explicit folder assignments remain unless revoked
+- Department transfer doesn't remove explicit assignments
+
+---
+
+### Edge Case 4: Circular Folder Structure
+
+**Scenario:** Prevent folder from being its own parent or ancestor
+
+**Test Cases:**
+
+1. **Direct circular reference:**
+```
+Folder A
+└── Move to parent: Folder A
+```
+   - Should fail: ❌
+   - Error: "Folder cannot be its own parent"
+
+2. **Indirect circular reference:**
+```
+Folder A
+└── Folder B
+    └── Folder C
+        └── Move Folder A here
+```
+   - Should fail: ❌
+   - Error: "Circular reference detected"
+
+3. **Valid move:**
+```
+Folder A → Folder D (unrelated)
+```
+   - Should succeed: ✅
+
+**Expected Behavior:**
+- Validate parent chain before move
+- Prevent any circular references
+- Check all ancestors recursively
+
+---
+
+### Edge Case 5: Simultaneous Share and Revoke
+
+**Scenario:** Owner shares folder, then immediately revokes while recipient is accessing
+
+**Test Cases:**
+
+1. **Share created, recipient hasn't accessed yet:**
+   - Share: ✅ Created
+   - Revoke: ✅ Access removed
+   - Recipient tries to access: ❌ No access
+
+2. **Recipient actively using shared folder:**
+   - Recipient viewing files
+   - Owner revokes share
+   - Current session: ✅ Can continue (cached)
+   - Next request: ❌ Access denied
+   - Folder removed from "Shared with Me"
+
+3. **Share updated instead of revoked:**
+   - Owner changes EDITOR → VIEWER
+   - Recipient trying to upload: ❌ Permission denied
+   - Recipient viewing: ✅ Still works
+
+**Expected Behavior:**
+- Revocation takes effect on next request
+- Current session may complete
+- Clear error messages to user
+- Remove from shared views immediately
+
+---
+
+### Edge Case 6: File Upload During Permission Change
+
+**Scenario:** User uploading file when their permission changes
+
+**Test Cases:**
+
+1. **Upload started with EDITOR permission:**
+   - Permission changed to VIEWER mid-upload
+   - Upload completes: ❌ Fail at finalization
+   - Error: "Permission changed during upload"
+
+2. **Upload started with VIEWER permission:**
+   - Should fail immediately: ❌
+   - Error: "Insufficient permissions"
+
+3. **Folder deleted during upload:**
+   - Upload should fail: ❌
+   - Error: "Folder no longer exists"
+
+**Expected Behavior:**
+- Check permissions at upload start
+- Verify permissions at upload completion
+- Handle gracefully with clear errors
+- Don't leave partial uploads
+
+---
+
+### Edge Case 7: Soft Delete and Undelete
+
+**Scenario:** Folder deleted, then user tries to access or undelete
+
+**Test Cases:**
+
+1. **Owner deletes folder:**
+   - Folder marked: isDeleted = true
+   - Owner can see in trash: ✅
+   - Others cannot see: ❌
+
+2. **Shared users access deleted folder:**
+   - All shared users lose access
+   - Removed from "Shared with Me"
+   - Error if direct access: "Folder not found"
+
+3. **Owner restores folder:**
+   - Set isDeleted = false
+   - All shares reactivate: ✅
+   - Shared users can access again
+
+4. **Permanent delete (30 days passed):**
+   - Hard delete folder
+   - Delete all files
+   - Remove all shares
+   - Remove all access records
+   - Cannot undelete: ❌
+
+**Expected Behavior:**
+- Soft delete preserves structure
+- Shares preserved during soft delete
+- Hard delete is permanent
+- Audit log retained even after hard delete
+
+---
+
+### Edge Case 8: Role Demotion
+
+**Scenario:** Admin demoted to Folder User
+
+**Setup:**
+
+**Initial:**
+- User is ADMIN
+- Has access to multiple departments
+
+**Change:**
+- User demoted to FOLDER_USER
+
+**Test Cases:**
+
+1. **Before demotion:**
+   - Access all folders in assigned departments: ✅
+
+2. **After demotion:**
+   - Access department folders: ❌ (role changed)
+   - Only assigned folders accessible: ✅
+
+3. **Explicit assignments:**
+   - If explicitly assigned as Folder Manager before demotion
+   - Assignment remains: ✅ (not revoked)
+
+4. **Try to assign others:**
+   - Should fail: ❌
+   - Error: "Insufficient permissions"
+
+**Expected Behavior:**
+- Role change revokes automatic access
+- Explicit assignments remain
+- Cannot perform actions above new role level
+- Audit log tracks demotion
+
+---
+
+### Testing Checklist
+
+#### Unit Tests:
+- ☑ Folder model validation
+- ☑ Access control logic
+- ☑ RBAC permission checking
+- ☑ Share permission validation
+- ☑ File access through folder permissions
+- ☑ Inheritance logic
+- ☑ Soft delete functionality
+
+#### Integration Tests:
+- ☑ Create personal folder and share
+- ☑ Create org folder and assign users
+- ☑ Upload file and check access
+- ☑ Revoke share and verify access removed
+- ☑ Department-based access control
+- ☑ Role-based access scenarios
+- ☑ Move folder and verify permissions
+
+#### End-to-End Tests:
+- ☑ Complete sharing workflow
+- ☑ Complete folder assignment workflow
+- ☑ File upload and download flow
+- ☑ Search across all drives
+- ☑ Recently accessed functionality
+- ☑ Breadcrumb navigation
+- ☑ Bulk operations
+
+#### Performance Tests:
+- ☑ Large folder hierarchy (1000+ folders)
+- ☑ Many shares (100+ users)
+- ☑ Concurrent uploads
+- ☑ Search performance
+- ☑ Query optimization
+- ☑ Index usage
+
+#### Security Tests:
+- ☑ Unauthorized access attempts
+- ☑ SQL injection attempts
+- ☑ XSS prevention
+- ☑ CSRF protection
+- ☑ File upload malware scanning
+- ☑ Rate limiting
+- ☑ Session hijacking prevention
+
+---
+
+## 📝 Summary
+
+This DMS Hybrid System provides:
+
+✅ **Personal Drive** - Private workspace with selective sharing  
+✅ **Organization Drive** - Department-based with 5-role RBAC  
+✅ **Flexible Sharing** - Granular permissions (Owner/Co-Owner/Editor/Viewer)  
+✅ **Strong Privacy** - Super Admin cannot access personal folders  
+✅ **Clear Access Control** - Two-layer system (storage + access)  
+✅ **Audit Trail** - Complete tracking of all actions  
+✅ **Scalable Architecture** - Supports growth and new features
+
+### Key Principles:
+
+- Privacy first for personal folders
+- Role-based access for organization folders
+- Explicit permissions over implicit
+- Audit everything
+- Fail secure
+
+---
+
+**End of Documentation**
